@@ -1,9 +1,8 @@
 import numpy as np
-
+import torch
 from utils.parameter import *
 from utils.utils import *
 from utils.sensor import sensor_work
-    
 
 class Agent:
     def __init__(self):
@@ -26,7 +25,6 @@ class Agent:
         self.waypoint = []
         self.travel_dist = 0
 
-
     def reset(self,
               ground_truth_size:np.ndarray,
               belief_origin_x:np.ndarray,
@@ -39,11 +37,9 @@ class Agent:
         self.waypoint = []
         self.waypoint.append(np.array([0.0, 0.0]))
 
-
     def get_obs(self):
         '''对于greedy agent, obs为frontier_cluster_centers'''
         return self.frontier_cluster_centers
-    
 
     def get_action(self):
         '''对于greedy agent, action为选出最近路程的frontier_cluster_center'''
@@ -60,13 +56,11 @@ class Agent:
                     best_path = np.array(path)
         self.waypoint.append(best_waypoint)
         self.trajectory.append(best_path)
-        self.travel_dist += min_distance
-        
+        self.travel_dist += min_distance 
 
     def update_robot_position(self):
         '''更新机器人位置, 将机器人位置更新为最新的waypoint(waypoint[-1])'''
         self.position = self.waypoint[-1]
-
 
     def update_belief_map(self,
                           robot_position_in_map:np.ndarray,
@@ -75,7 +69,6 @@ class Agent:
                                       self.scan_range, 
                                       self.belief_map_info.map, 
                                       ground_truth)
-    
 
     def update_frontier(self):
         '''更新frontier'''
@@ -91,14 +84,18 @@ class Agent:
             else:
                 valid_centers.append(center)
         self.frontier_cluster_centers = np.array(valid_centers)
-    
 
 class FrontierSACAgent(Agent):
-    def __init__(self):
+    def __init__(self, policy_net):
         super().__init__()
+        self.policy_net = policy_net
     
     def get_obs(self):
+        '''
+        obs = [归一化后的frontier_cluster_centers, 归一化后的waypoint, mask]
+        '''
         pass
 
-    def get_action(self):
+
+    def get_action(self, obs):
         pass

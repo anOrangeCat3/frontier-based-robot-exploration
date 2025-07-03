@@ -1,9 +1,11 @@
 from utils.env import Env
 from utils.utils import *
+from utils.agent import Agent
 import matplotlib.pyplot as plt
 
 done=False
-env = Env()
+agent = Agent()
+env = Env(agent)
 env.reset()
 plt.ion()  # 开启交互模式
 fig = plt.figure()

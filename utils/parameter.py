@@ -17,3 +17,9 @@ EXPLORATION_RATE_THRESHOLD = 0.99  # 探索率阈值
 
 # agent parameters
 N_CLUSTERS = 16
+
+# network parameters
+INPUT_DIM = 2
+EMBEDDING_DIM = 64
+NUM_HEADS = 4
+NUM_LAYERS = 3

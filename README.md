@@ -2,5 +2,5 @@
 
 ## Agent - greedy policy
 
-## FrontierSACAgent - rl to train policy
+## FrontierSACAgent - use SAC to train policy
 

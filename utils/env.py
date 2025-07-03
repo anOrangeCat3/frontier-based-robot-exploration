@@ -10,7 +10,7 @@ from utils.utils import get_position_in_map_from_coords
 
 
 class Env:
-    def __init__(self):
+    def __init__(self,agent:Agent):
         '''
         Attributes:
             ground_truth: ndarray
@@ -19,8 +19,7 @@ class Env:
         '''
         self.pixel_size = PIXEL_SIZE  # meter
 
-        self.robot=Agent()  # 可替换为其他agent
-        # self.robot = SACAgent()
+        self.robot=agent  # 可替换为其他agent
 
         self.ground_truth=None  # pixel
         self.ground_truth_size=None  # pixel
@@ -34,7 +33,6 @@ class Env:
         # map info 用于坐标系转换
         self.belief_origin_x=None
         self.belief_origin_y=None
-
 
     def reset(self):
         self.ground_truth, self.robot_position_in_map = self.import_ground_truth(self.episode_index)
@@ -55,9 +53,9 @@ class Env:
 
         self.episode_index += 1
 
+        return obs
 
-    def step(self):
-        
+    def step(self, action):
         # TODO：移动到下一个目标点, robot_position_in_map和robot.position同时更新
         self.update_position()
         # TODO：更新机器人信息
@@ -72,12 +70,51 @@ class Env:
             # TODO：得到下一个目标点
             self.robot.get_action()
             done = False
-        
 
-        return done
+        return next_obs, reward, done
+
+    def update_env_info(self):
+        # update robot_position_in_map
+        self.robot_position_in_map = get_position_in_map_from_coords(self.robot.position, 
+                                                                     self.robot.belief_map_info)
+        # update explored rate
+        self.update_explored_rate()
+        self.step_count += 1
+
+    def update_explored_rate(self):
+        old_explored_rate = self.explored_rate
+        self.explored_rate = np.sum(self.robot.belief_map_info.map == FREE) / np.sum(self.ground_truth == FREE)
+        self.explored_rate_change = self.explored_rate - old_explored_rate
         
+    def update_position(self):
+        # update robot position
+        self.robot.update_robot_position()
+        # update robot_position_in_map
+        self.robot_position_in_map = get_position_in_map_from_coords(self.robot.position, 
+                                                                     self.robot.belief_map_info)
+
+    def update_robot_info(self):
+        # update robot belief map
+        self.robot.update_belief_map(self.robot_position_in_map,
+                                     self.ground_truth)
+        # update global frontier and frontier cluster centers
+        self.robot.update_frontier()
+
+    def import_ground_truth(self, episode_index:int)->tuple[np.ndarray,np.ndarray]:
+        map_dir = f'maps/train/'
+        map_list = os.listdir(map_dir)
+        map_index = episode_index % np.size(map_list)
+        ground_truth = (io.imread(map_dir + '/' + map_list[map_index], 1) * 255).astype(int)
+        ground_truth = block_reduce(ground_truth, 2, np.min)  # 图像降采样
+
+        robot_position_in_map = np.nonzero(ground_truth == 208)
+        robot_position_in_map = np.array([np.array(robot_position_in_map)[1, 10], np.array(robot_position_in_map)[0, 10]])
+
+        ground_truth = (ground_truth > 150) | ((ground_truth <= 80) & (ground_truth >= 50))
+        ground_truth = ground_truth * 254 + 1
+
+        return ground_truth, robot_position_in_map
     
-
     def plot(self):
         plt.imshow(self.robot.belief_map_info.map, cmap='gray')
         plt.axis('off')
@@ -108,53 +145,6 @@ class Env:
                     plt.plot(path[:,0], path[:,1], 'r--', linewidth=1.5, alpha=1, zorder=1)
         plt.title(f"Step {self.step_count}  Explored ratio: {self.explored_rate*100:.4g}%  Travel distance: {self.robot.travel_dist:.4g}m")
         plt.show()
-
-
-    def update_env_info(self):
-        # update robot_position_in_map
-        self.robot_position_in_map = get_position_in_map_from_coords(self.robot.position, 
-                                                                     self.robot.belief_map_info)
-        # update explored rate
-        self.update_explored_rate()
-        self.step_count += 1
-
-
-    def update_explored_rate(self):
-        old_explored_rate = self.explored_rate
-        self.explored_rate = np.sum(self.robot.belief_map_info.map == FREE) / np.sum(self.ground_truth == FREE)
-        self.explored_rate_change = self.explored_rate - old_explored_rate
-        
-    def update_position(self):
-        # update robot position
-        self.robot.update_robot_position()
-        # update robot_position_in_map
-        self.robot_position_in_map = get_position_in_map_from_coords(self.robot.position, 
-                                                                     self.robot.belief_map_info)
-
-
-    def update_robot_info(self):
-        # update robot belief map
-        self.robot.update_belief_map(self.robot_position_in_map,
-                                     self.ground_truth)
-        # update global frontier and frontier cluster centers
-        self.robot.update_frontier()
-
-
-    def import_ground_truth(self, episode_index:int)->tuple[np.ndarray,np.ndarray]:
-        map_dir = f'maps/train/'
-        map_list = os.listdir(map_dir)
-        map_index = episode_index % np.size(map_list)
-        ground_truth = (io.imread(map_dir + '/' + map_list[map_index], 1) * 255).astype(int)
-        ground_truth = block_reduce(ground_truth, 2, np.min)  # 图像降采样
-
-        robot_position_in_map = np.nonzero(ground_truth == 208)
-        robot_position_in_map = np.array([np.array(robot_position_in_map)[1, 10], np.array(robot_position_in_map)[0, 10]])
-
-        ground_truth = (ground_truth > 150) | ((ground_truth <= 80) & (ground_truth >= 50))
-        ground_truth = ground_truth * 254 + 1
-
-        return ground_truth, robot_position_in_map
-    
 
     
     
