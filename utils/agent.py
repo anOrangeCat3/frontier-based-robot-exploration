@@ -23,7 +23,8 @@ class Agent:
         self.frontier_cluster_centers = np.array([])
         self.trajectory = []
         self.waypoint = []
-        self.travel_dist = 0
+        self.travel_dist = []
+        self.dist = 0
 
     def reset(self,
               ground_truth_size:np.ndarray,
@@ -32,7 +33,8 @@ class Agent:
         belief_map = np.ones(ground_truth_size) * 127
         self.belief_map_info = MapInfo(belief_map, belief_origin_x, belief_origin_y)
         self.position = np.array([0.0, 0.0])
-        self.travel_dist = 0
+        self.travel_dist = []
+        self.dist = 0
         self.trajectory = []
         self.waypoint = []
         self.waypoint.append(np.array([0.0, 0.0]))
@@ -41,22 +43,33 @@ class Agent:
         '''对于greedy agent, obs为frontier_cluster_centers'''
         return self.frontier_cluster_centers
 
-    def get_action(self):
+    def get_action(self,obs):
         '''对于greedy agent, action为选出最近路程的frontier_cluster_center'''
-        self.get_obs()
         best_waypoint = None
         min_distance = float('inf')
-        for center in self.frontier_cluster_centers:
+        for center in obs:
             path = A_star(self.position, center, self.belief_map_info)
             if path:  # 选出最近路程的frontier_cluster_center
                 path_length = get_path_length(path)
                 if path_length < min_distance:
                     min_distance = path_length
+                    # best_path = np.array(path)
                     best_waypoint = center
-                    best_path = np.array(path)
-        self.waypoint.append(best_waypoint)
-        self.trajectory.append(best_path)
-        self.travel_dist += min_distance 
+        return best_waypoint
+
+    def move(self, target_point:np.ndarray):
+        '''
+        将目标点添加到waypoint中
+        A*得到路径
+        计算路径长度添加到travel_dist中
+        移动到目标点
+        '''
+        self.waypoint.append(target_point)
+        path = A_star(self.position, target_point, self.belief_map_info)
+        self.trajectory.append(path)
+        dist = get_path_length(path)
+        self.travel_dist.append(dist)
+        self.dist += dist
 
     def update_robot_position(self):
         '''更新机器人位置, 将机器人位置更新为最新的waypoint(waypoint[-1])'''
@@ -85,3 +98,50 @@ class Agent:
                 valid_centers.append(center)
         self.frontier_cluster_centers = np.array(valid_centers)
 
+
+class FrontierSACAgent(Agent):
+    def __init__(self):
+        super().__init__()
+
+    def get_obs(self):
+        '''
+        obs = [归一化后的frontier_cluster_centers, 归一化后的waypoint, mask]
+        '''
+        norm_frontiers = self.normalize_frontiers(self.frontier_cluster_centers)
+        norm_waypoint = self.normalize_waypoint(self.waypoint)
+        mask = self.get_mask(self.waypoint)
+        obs = [norm_frontiers, norm_waypoint, mask]
+        return obs
+
+    def normalize_frontiers(self, 
+                            frontier_cluster_centers:np.ndarray)->np.ndarray:
+        '''
+        以当前机器人位置为原点
+        '''
+            # 处理空的前沿点数组
+        if frontier_cluster_centers.size == 0:
+            return frontier_cluster_centers  # 直接返回空数组
+        norm_frontiers = frontier_cluster_centers - self.position
+        return norm_frontiers
+    
+    def normalize_waypoint(self, 
+                           waypoint:list)->np.ndarray:
+        '''
+        以当前机器人位置为原点
+        然后填充到MAX_EPISODE_STEP
+        '''
+        norm_waypoint = np.zeros((MAX_EPISODE_STEP, 2))
+        for i, way in enumerate(waypoint):
+            norm_waypoint[i] = way - self.position
+        return norm_waypoint
+    
+    def get_mask(self, 
+                 waypoint:list)->np.ndarray:
+        '''
+        长度为MAX_EPISODE_STEP的bool
+        其中前len(waypoint)为True, 其余为False
+        '''
+        mask = np.zeros(MAX_EPISODE_STEP, dtype=bool)
+        mask[:len(waypoint)] = True
+        return mask
+    
