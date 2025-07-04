@@ -130,7 +130,7 @@ class Encoder(nn.Module):
         for layer in self.encoder_layers:
             traj_enc = layer(traj_enc, traj_mask, frontier_embed)  # 逐层更新
         
-        return traj_enc
+        return traj_enc, frontier_embed
 
 
 class PolicyNet(nn.Module):
@@ -138,7 +138,6 @@ class PolicyNet(nn.Module):
         super().__init__()
         self.embed_dim = embed_dim
         self.frontier_num = frontier_num
-        self.enbedding_layer = Embedding()
         
         # Actor的MLP头，输入轨迹全局向量 + 单个前沿点特征拼接
         self.mlp = nn.Sequential(
@@ -147,14 +146,13 @@ class PolicyNet(nn.Module):
             nn.Linear(256, 1)
         )
 
-    def forward(self, frontier, traj_enc, traj_mask):
+    def forward(self, frontier_embed, traj_enc, traj_mask):
         """
-        frontier: [B, N, 2] 前沿点坐标
+        frontier_embed: [B, N, 64] 前沿点特征
         traj_enc: [B, 64, 64] 来自Encoder的轨迹编码
         traj_mask: [B, 64] 轨迹掩码, True表示valid位置
         """
         # 1. 对前沿点进行embedding
-        frontier_embed = self.enbedding_layer(frontier)  # [B, N, 64]
         N = frontier_embed.size(1)
 
         # 2. 使用traj_mask对轨迹编码进行加权pooling，得到全局轨迹状态
@@ -180,7 +178,6 @@ class QNet(nn.Module):
         super().__init__()
         self.embed_dim = embed_dim
         self.frontier_num = frontier_num
-        self.enbedding_layer = Embedding()
         
         # Critic的MLP头
         self.mlp = nn.Sequential(
@@ -189,14 +186,13 @@ class QNet(nn.Module):
             nn.Linear(256, 1)
         )
 
-    def forward(self, frontier, traj_enc, traj_mask):
+    def forward(self, frontier_embed, traj_enc, traj_mask):
         """
-        frontier: [B, N, 2] 前沿点坐标
+        frontier_embed: [B, N, 64] 前沿点特征
         traj_enc: [B, 64, 64] 来自Encoder的轨迹编码
-        traj_mask: [B, 64] 轨迹掩码，True表示valid位置
+        traj_mask: [B, 64] 轨迹掩码, True表示valid位置
         """
         # 1. 对前沿点进行embedding
-        frontier_embed = self.enbedding_layer(frontier)  # [B, N, 64]
         N = frontier_embed.size(1)
 
         # 2. 使用traj_mask对轨迹编码进行加权pooling，得到全局轨迹状态

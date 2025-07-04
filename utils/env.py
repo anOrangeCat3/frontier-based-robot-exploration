@@ -5,7 +5,7 @@ from skimage.measure import block_reduce
 import matplotlib.pyplot as plt
 
 from utils.parameter import *
-from utils.agent import Agent, FrontierSACAgent
+from utils.agent import Agent
 from utils.utils import get_position_in_map_from_coords
 
 
@@ -27,7 +27,7 @@ class Env:
         
         self.explored_rate=0
         self.explored_rate_change=0
-        self.episode_index = 0 
+        self.episode_index = 1 
         self.step_count=0
 
         # map info 用于坐标系转换
@@ -43,7 +43,7 @@ class Env:
 
         self.explored_rate = 0
         self.explored_rate_change = 0
-        self.step_count = 0
+        self.step_count = 1  # 初始化步数为1, 保证waypoint长度最大为MAX_EPISODE_STEP
 
         self.robot.reset(self.ground_truth_size,
                          self.belief_origin_x,
@@ -53,9 +53,7 @@ class Env:
 
         self.episode_index += 1
 
-        return obs
-
-    def step(self, action):
+    def step(self):
         # TODO：移动到下一个目标点, robot_position_in_map和robot.position同时更新
         self.update_position()
         # TODO：更新机器人信息
@@ -71,7 +69,7 @@ class Env:
             self.robot.get_action()
             done = False
 
-        return next_obs, reward, done
+        return done
 
     def update_env_info(self):
         # update robot_position_in_map

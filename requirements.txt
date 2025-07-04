@@ -1,0 +1,7 @@
+python==3.10
+torch==2.7.1
+cuda==12.8
+numpy
+scikit-image
+matplotlib
+scikit-learn

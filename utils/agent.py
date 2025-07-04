@@ -85,17 +85,3 @@ class Agent:
                 valid_centers.append(center)
         self.frontier_cluster_centers = np.array(valid_centers)
 
-class FrontierSACAgent(Agent):
-    def __init__(self, policy_net):
-        super().__init__()
-        self.policy_net = policy_net
-    
-    def get_obs(self):
-        '''
-        obs = [归一化后的frontier_cluster_centers, 归一化后的waypoint, mask]
-        '''
-        pass
-
-
-    def get_action(self, obs):
-        pass
