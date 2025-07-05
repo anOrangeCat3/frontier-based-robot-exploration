@@ -24,15 +24,18 @@ def test_greedy():
 
 def test_sac(model_path=None):
     # 初始化网络
-    encoder = Encoder()
     policy_net = PolicyNet()
+    # 加载模型
     if model_path is not None:
-        encoder.load_state_dict(torch.load(model_path))
-        policy_net.load_state_dict(torch.load(model_path))
+        checkpoint = torch.load(model_path,weights_only=False)
+        policy_net.load_state_dict(checkpoint['policy_net'])
+        print(f"Loaded policy from episode {checkpoint.get('episode', 'Unknown')}")
+    
+    policy_net.eval()
     # 初始化agent
     agent = FrontierSACAgent()
     # 初始化环境
-    env = Env_SAC(agent)
+    env = Env_SAC(agent,mode='test')
     # reset
     obs = env.reset()
 
@@ -43,8 +46,7 @@ def test_sac(model_path=None):
         plt.clf()
         # get action
         frontier_tensor, traj_tensor, mask_tensor = get_obs_tensor(obs)
-        traj_enc, frontier_embed = encoder(frontier_tensor, traj_tensor, mask_tensor)
-        logits = policy_net(frontier_embed, traj_enc, mask_tensor)
+        logits = policy_net(frontier_tensor, traj_tensor, mask_tensor)
         action_index = torch.argmax(logits.squeeze(0))
         action = agent.frontier_cluster_centers[action_index]  # action is the next point
         # print(f"action: {action}")
@@ -66,5 +68,5 @@ def get_obs_tensor(obs:tuple[np.ndarray, np.ndarray, np.ndarray])->tuple[torch.T
 
 
 if __name__ == "__main__":
-    # test_sac()
-    test_greedy()
+    test_sac(model_path='./checkpoints/sac_training_20250705_174157/sac_model_episode_8400.pth')
+    # test_greedy()

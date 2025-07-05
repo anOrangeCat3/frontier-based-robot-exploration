@@ -110,7 +110,6 @@ def frontier_down_sample(data, voxel_size=FRONTIER_CELL_SIZE):
             if np.linalg.norm(point - np.array(voxel_index) * voxel_size) < np.linalg.norm(
                     current_point - np.array(voxel_index) * voxel_size):
                 voxel_dict[voxel_index] = point
-
     downsampled_data = set(map(tuple, voxel_dict.values()))
     return downsampled_data
 
@@ -136,7 +135,7 @@ def cluster_frontiers(frontier_coords: set[tuple[np.ndarray, np.ndarray]],
     # print(f"原始前沿点数量: {original_count}")
     # 如果前沿点数量少于聚类数，复制前沿点
     if len(frontier_list) < n_clusters:
-        print(f"前沿点数量({len(frontier_list)}) < 聚类数({n_clusters})，开始复制前沿点...")
+        # print(f"前沿点数量({len(frontier_list)}) < 聚类数({n_clusters})，开始复制前沿点...")
         needed_points = n_clusters - len(frontier_list)
         # 复制现有前沿点，添加小的随机偏移避免完全重复
         np.random.seed(42)  # 确保可重复性

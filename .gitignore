@@ -1,5 +1,6 @@
 __pycache__
 
+checkpoints/
 .DS_Store
 
 test_network.py

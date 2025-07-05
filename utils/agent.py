@@ -34,10 +34,12 @@ class Agent:
         self.belief_map_info = MapInfo(belief_map, belief_origin_x, belief_origin_y)
         self.position = np.array([0.0, 0.0])
         self.travel_dist = []
+        self.travel_dist.append(0.0)
         self.dist = 0
         self.trajectory = []
         self.waypoint = []
         self.waypoint.append(np.array([0.0, 0.0]))
+        
 
     def get_obs(self):
         '''对于greedy agent, obs为frontier_cluster_centers'''
@@ -96,6 +98,16 @@ class Agent:
                     valid_centers.append(nearest_accessible)
             else:
                 valid_centers.append(center)
+        # print(len(valid_centers))
+        # 确保数量始终为N_CLUSTERS
+        if len(valid_centers) != 0 and len(valid_centers) < N_CLUSTERS:
+            while len(valid_centers) < N_CLUSTERS:
+                # 如果数量不足，复制最后一个有效点
+                if valid_centers:
+                    new_center = valid_centers[-1]
+                    valid_centers.append(new_center)
+        # 确保不超过N_CLUSTERS
+        valid_centers = valid_centers[:N_CLUSTERS]
         self.frontier_cluster_centers = np.array(valid_centers)
 
 
@@ -129,10 +141,13 @@ class FrontierSACAgent(Agent):
         '''
         以当前机器人位置为原点
         然后填充到MAX_EPISODE_STEP
+        并加入travel_dist作为cost拼成一个dim=3的数组
         '''
-        norm_waypoint = np.zeros((MAX_EPISODE_STEP, 2))
+        norm_waypoint = np.zeros((MAX_EPISODE_STEP, 3))
         for i, way in enumerate(waypoint):
-            norm_waypoint[i] = way - self.position
+            norm_waypoint[i, :2] = way - self.position
+        for i, dist in enumerate(self.travel_dist):
+            norm_waypoint[i, 2] = dist
         return norm_waypoint
     
     def get_mask(self, 

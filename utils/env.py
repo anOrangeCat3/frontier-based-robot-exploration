@@ -10,7 +10,7 @@ from utils.utils import get_position_in_map_from_coords, A_star
 
 
 class Env:
-    def __init__(self,agent:Agent):
+    def __init__(self,agent:Agent,mode:str):
         '''
         Attributes:
             ground_truth: ndarray
@@ -33,6 +33,8 @@ class Env:
         # map info 用于坐标系转换
         self.belief_origin_x=None
         self.belief_origin_y=None
+        # train or test
+        self.mode = mode
 
     def reset(self):
         self.ground_truth, self.robot_position_in_map = self.import_ground_truth(self.episode_index)
@@ -107,7 +109,10 @@ class Env:
         self.robot.update_frontier()
 
     def import_ground_truth(self, episode_index:int)->tuple[np.ndarray,np.ndarray]:
-        map_dir = f'maps/train/'
+        if self.mode == 'train':
+            map_dir = f'maps/train/'
+        else:
+            map_dir = f'maps/test/'
         map_list = os.listdir(map_dir)
         map_index = episode_index % np.size(map_list)
         ground_truth = (io.imread(map_dir + '/' + map_list[map_index], 1) * 255).astype(int)
@@ -156,8 +161,8 @@ class Env:
 
 
 class Env_SAC(Env):
-    def __init__(self, agent: FrontierSACAgent):
-        super().__init__(agent)
+    def __init__(self, agent: FrontierSACAgent, mode:str):
+        super().__init__(agent, mode)
 
     def step(self, action:np.ndarray)->tuple[np.ndarray, float, bool]:
         self.robot.move(action)
@@ -197,9 +202,9 @@ class Env_SAC(Env):
         '''
         # === 1. exploration rate change 作为参考 ===
         base_exploration_reward = self.explored_rate_change * BASE_EXPLORATION_REWARD_WEIGHT
-        # === 2. 单步探索效率奖励 (核心奖励) ===
+        # === 2. 单步探索效率奖励 (核心奖励)===
         single_step_exploration_reward = self.explored_rate_change/self.robot.travel_dist[-1] * SINGLE_STEP_EXPLORATION_REWARD_WEIGHT
-        # === 3. 长期探索效率奖励 ===
+        # === 3. 长期探索效率奖励 (核心奖励)===
         long_term_exploration_reward = self.explored_rate/self.robot.dist * LONG_TERM_EXPLORATION_REWARD_WEIGHT
         # === 4. 完成探索奖励 ===
         finish_exploration_reward = FINISH_EXPLORATION_REWARD if terminate else 0
@@ -208,14 +213,14 @@ class Env_SAC(Env):
         # === 6. 总奖励 ===
         total_reward = base_exploration_reward + single_step_exploration_reward + long_term_exploration_reward + finish_exploration_reward + not_finish_exploration_penalty
 
-        print(f'exploration_rate_change: {self.explored_rate_change}, explored_rate: {self.explored_rate}\n'
-              f'base_exploration_reward: {base_exploration_reward}\n'
-              f'single_step_exploration_reward: {single_step_exploration_reward}\n'
-              f'long_term_exploration_reward: {long_term_exploration_reward}\n'
-              f'finish_exploration_reward: {finish_exploration_reward}\n'
-              f'not_finish_exploration_penalty: {not_finish_exploration_penalty}\n'
-              f'total_reward: {total_reward}\n'
-              f'--------------------------------')
+        # print(f'exploration_rate_change: {self.explored_rate_change}, explored_rate: {self.explored_rate}\n'
+        #       f'base_exploration_reward: {base_exploration_reward}\n'
+        #       f'single_step_exploration_reward: {single_step_exploration_reward}\n'
+        #       f'long_term_exploration_reward: {long_term_exploration_reward}\n'
+        #       f'finish_exploration_reward: {finish_exploration_reward}\n'
+        #       f'not_finish_exploration_penalty: {not_finish_exploration_penalty}\n'
+        #       f'total_reward: {total_reward}\n'
+        #       f'--------------------------------')
 
         return total_reward
     

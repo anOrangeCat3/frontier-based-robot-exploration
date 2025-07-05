@@ -1,20 +1,18 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from torch.distributions import Categorical
 import math
 
 from utils.parameter import *
 
 
 class Embedding(nn.Module):
-    def __init__(self, input_dim=INPUT_DIM, embed_dim=EMBEDDING_DIM):
+    def __init__(self, input_dim, embed_dim=EMBEDDING_DIM):
         super().__init__()
         self.x_embed = nn.Linear(input_dim, embed_dim)
 
     def forward(self, x):
         """
-        traj: [B, 64, 2] -> [B, 64, 64]
+        traj: [B, 64, 3] -> [B, 64, 64]
         frontier: [B, 16, 2] -> [B, 16, 64]
         """
         x_feat = self.x_embed(x)          # [B, 64, 64]
@@ -116,14 +114,17 @@ class EncoderLayer(nn.Module):
 class Encoder(nn.Module):
     def __init__(self):
         super().__init__()
-        self.enbedding_layer = Embedding()
+        # 修改：enbedding_layer -> embedding_layer
+        self.traj_embedding_layer = Embedding(input_dim=3)      
+        self.frontier_embedding_layer = Embedding(input_dim=2)
         self.positional_encoding = PositionalEncoding()
         self.encoder_layers = nn.ModuleList([EncoderLayer() for _ in range(NUM_LAYERS)])
 
     def forward(self, frontier, traj, traj_mask):
-        traj_embed = self.enbedding_layer(traj)
+        # 修改：self.enbedding_layer -> self.embedding_layer
+        traj_embed = self.traj_embedding_layer(traj)     
         traj_embed = self.positional_encoding(traj_embed)
-        frontier_embed = self.enbedding_layer(frontier)
+        frontier_embed = self.frontier_embedding_layer(frontier)     
         
         # 修复：逐层更新轨迹特征
         traj_enc = traj_embed
@@ -138,6 +139,7 @@ class PolicyNet(nn.Module):
         super().__init__()
         self.embed_dim = embed_dim
         self.frontier_num = frontier_num
+        self.encoder = Encoder()
         
         # Actor的MLP头，输入轨迹全局向量 + 单个前沿点特征拼接
         self.mlp = nn.Sequential(
@@ -146,12 +148,13 @@ class PolicyNet(nn.Module):
             nn.Linear(256, 1)
         )
 
-    def forward(self, frontier_embed, traj_enc, traj_mask):
+    def forward(self, frontier, traj, traj_mask):
         """
         frontier_embed: [B, N, 64] 前沿点特征
         traj_enc: [B, 64, 64] 来自Encoder的轨迹编码
         traj_mask: [B, 64] 轨迹掩码, True表示valid位置
         """
+        traj_enc, frontier_embed = self.encoder(frontier, traj, traj_mask)
         # 1. 对前沿点进行embedding
         N = frontier_embed.size(1)
 
@@ -178,6 +181,7 @@ class QNet(nn.Module):
         super().__init__()
         self.embed_dim = embed_dim
         self.frontier_num = frontier_num
+        self.encoder = Encoder()
         
         # Critic的MLP头
         self.mlp = nn.Sequential(
@@ -186,12 +190,13 @@ class QNet(nn.Module):
             nn.Linear(256, 1)
         )
 
-    def forward(self, frontier_embed, traj_enc, traj_mask):
+    def forward(self, frontier, traj, traj_mask):
         """
         frontier_embed: [B, N, 64] 前沿点特征
         traj_enc: [B, 64, 64] 来自Encoder的轨迹编码
         traj_mask: [B, 64] 轨迹掩码, True表示valid位置
         """
+        traj_enc, frontier_embed = self.encoder(frontier, traj, traj_mask)
         # 1. 对前沿点进行embedding
         N = frontier_embed.size(1)
 
