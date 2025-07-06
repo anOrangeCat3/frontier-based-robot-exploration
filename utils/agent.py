@@ -1,5 +1,5 @@
 import numpy as np
-import torch
+
 from utils.parameter import *
 from utils.utils import *
 from utils.sensor import sensor_work
@@ -36,6 +36,8 @@ class Agent:
         self.travel_dist = []
         self.travel_dist.append(0.0)
         self.dist = 0
+        self.all_dist = []
+        self.all_dist.append(0.0)
         self.trajectory = []
         self.waypoint = []
         self.waypoint.append(np.array([0.0, 0.0]))
@@ -72,6 +74,8 @@ class Agent:
         dist = get_path_length(path)
         self.travel_dist.append(dist)
         self.dist += dist
+        self.all_dist.append(self.dist)
+        self.position = target_point
 
     def update_robot_position(self):
         '''更新机器人位置, 将机器人位置更新为最新的waypoint(waypoint[-1])'''
@@ -143,11 +147,13 @@ class FrontierSACAgent(Agent):
         然后填充到MAX_EPISODE_STEP
         并加入travel_dist作为cost拼成一个dim=3的数组
         '''
-        norm_waypoint = np.zeros((MAX_EPISODE_STEP, 3))
+        norm_waypoint = np.zeros((MAX_EPISODE_STEP, 4))
         for i, way in enumerate(waypoint):
             norm_waypoint[i, :2] = way - self.position
         for i, dist in enumerate(self.travel_dist):
             norm_waypoint[i, 2] = dist
+        for i, dist in enumerate(self.all_dist):
+            norm_waypoint[i, 3] = dist
         return norm_waypoint
     
     def get_mask(self, 

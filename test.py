@@ -68,5 +68,8 @@ def get_obs_tensor(obs:tuple[np.ndarray, np.ndarray, np.ndarray])->tuple[torch.T
 
 
 if __name__ == "__main__":
-    test_sac(model_path='./checkpoints/sac_training_20250705_174157/sac_model_episode_8400.pth')
+    # 0705_214750：traj inpit_dim =3
+    # 0706_003355：traj inpit_dim =4
+    # checkpoints/sac_training_20250706_003355/sac_model_episode_37500.pth
+    test_sac(model_path='./checkpoints/sac_training_20250706_003355/sac_model_episode_42900.pth')
     # test_greedy()

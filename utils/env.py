@@ -27,7 +27,7 @@ class Env:
         
         self.explored_rate=0
         self.explored_rate_change=0
-        self.episode_index = 1 
+        self.episode_index = 0
         self.step_count=0
 
         # map info 用于坐标系转换
@@ -39,10 +39,8 @@ class Env:
     def reset(self):
         self.ground_truth, self.robot_position_in_map = self.import_ground_truth(self.episode_index)
         self.ground_truth_size = np.shape(self.ground_truth)  # pixel
-
         self.belief_origin_x = -np.round(self.robot_position_in_map[0] * self.pixel_size, 1)  # meter
         self.belief_origin_y = -np.round(self.robot_position_in_map[1] * self.pixel_size, 1)  # meter
-
         self.explored_rate = 0
         self.explored_rate_change = 0
         self.step_count = 0  
@@ -60,7 +58,7 @@ class Env:
     def step(self, action:np.ndarray)->tuple[np.ndarray, float, bool]:
         self.robot.move(action)
         # 移动到下一个目标点, robot_position_in_map和robot.position同时更新
-        self.update_position()
+        # self.update_position()
         # 更新机器人信息
         self.update_robot_info()
         # 更新环境信息
@@ -71,16 +69,11 @@ class Env:
             done = True
         else:
             done = False
-        # 步数+1
-        self.step_count += 1
         next_obs = self.robot.get_obs()
         reward = 0  # greedy agent没有reward
         return next_obs, reward, done
 
     def update_env_info(self):
-        # update robot_position_in_map
-        self.robot_position_in_map = get_position_in_map_from_coords(self.robot.position, 
-                                                                     self.robot.belief_map_info)
         # update explored rate
         self.update_explored_rate()
         self.step_count += 1
@@ -94,14 +87,17 @@ class Env:
             self.explored_rate = np.sum(self.robot.belief_map_info.map == FREE) / np.sum(self.ground_truth == FREE)
         self.explored_rate_change = self.explored_rate - old_explored_rate
         
-    def update_position(self):
+    # def update_position(self):
         # update robot position
-        self.robot.update_robot_position()
+        # self.robot.update_robot_position()
+        # update robot_position_in_map
+        # self.robot_position_in_map = get_position_in_map_from_coords(self.robot.position, 
+        #                                                              self.robot.belief_map_info)
+
+    def update_robot_info(self):
         # update robot_position_in_map
         self.robot_position_in_map = get_position_in_map_from_coords(self.robot.position, 
                                                                      self.robot.belief_map_info)
-
-    def update_robot_info(self):
         # update robot belief map
         self.robot.update_belief_map(self.robot_position_in_map,
                                      self.ground_truth)
@@ -131,12 +127,11 @@ class Env:
         plt.axis('off')
         # robot position    
         plt.plot(self.robot_position_in_map[0],self.robot_position_in_map[1],'mo',markersize=5,zorder=10)
-        
+        # frontier points
         if len(self.robot.frontier_cluster_centers) > 0:
             frontier_points = get_position_in_map_from_coords(self.robot.frontier_cluster_centers,
                                                               self.robot.belief_map_info)
             plt.scatter(frontier_points[:,0], frontier_points[:,1], c='darkred', s=10, marker='o', alpha=1, zorder=2)
-        
         # trajectory
         if len(self.robot.trajectory) > 0:
             # 先画所有历史路径
@@ -167,7 +162,7 @@ class Env_SAC(Env):
     def step(self, action:np.ndarray)->tuple[np.ndarray, float, bool]:
         self.robot.move(action)
         # 移动到下一个目标点, robot_position_in_map和robot.position同时更新
-        self.update_position()
+        # self.update_position()
         # 更新机器人信息
         self.update_robot_info()
         # 得到next_obs
@@ -178,7 +173,6 @@ class Env_SAC(Env):
         # TODO: 计算奖励
         reward=self.calculate_reward(terminate, truncated)
         done=terminate or truncated
-        self.step_count += 1
         return next_obs, reward, done
     
     def check_finish(self)->tuple[bool,bool]:

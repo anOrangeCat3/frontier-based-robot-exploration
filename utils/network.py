@@ -115,7 +115,7 @@ class Encoder(nn.Module):
     def __init__(self):
         super().__init__()
         # 修改：enbedding_layer -> embedding_layer
-        self.traj_embedding_layer = Embedding(input_dim=3)      
+        self.traj_embedding_layer = Embedding(input_dim=4)      
         self.frontier_embedding_layer = Embedding(input_dim=2)
         self.positional_encoding = PositionalEncoding()
         self.encoder_layers = nn.ModuleList([EncoderLayer() for _ in range(NUM_LAYERS)])
