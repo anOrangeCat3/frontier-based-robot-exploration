@@ -10,7 +10,7 @@ import os
 import json
 from datetime import datetime
 
-from utils.network import Encoder, PolicyNet, QNet
+from utils.network import PolicyNet, QNet
 from utils.agent import FrontierSACAgent
 from utils.env import Env_SAC
 from utils.parameter import *
